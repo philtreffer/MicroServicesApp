@@ -15,11 +15,12 @@ public class AuctionSvcHttpClient
     public async Task<List<Item>> GetItemsForSearchDb()
     {   // Providing the latest updated Auction in our database
         var lastUpdated = await DB.Find<Item, string>()
-            .Sort(x => x.Descending(xa => xa.UpdatedAt))
+            .Sort(x => x.Descending(x => x.UpdatedAt))
             .Project(x => x.UpdatedAt.ToString())
-            .ExecuteAnyAsync();
-        return await _httpClient.GetFromJsonAsync<List<Item>>(_config["AuctionServiceUrl"]
-                + "/api/auctions?date=" + lastUpdated);// QueryString, just as simple example
+            .ExecuteFirstAsync();
+
+        return await _httpClient.GetFromJsonAsync<List<Item>>(_config["AuctionServiceUrl"] 
+            + "/api/auctions?date=" + lastUpdated);// QueryString, just as simple example
 
     }
 
