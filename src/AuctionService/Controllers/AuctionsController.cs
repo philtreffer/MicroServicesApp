@@ -5,6 +5,7 @@ using AuctionService.Data;
 using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,23 +39,39 @@ public class AuctionsController :ControllerBase
             // Now that we have that, let's create a couple of endpoints 
 
     [HttpGet]
-    public async Task<ActionResult<List<AuctionDto>>> GetAllAuctions()
+    public async Task<ActionResult<List<AuctionDto>>> GetAllAuctions(string date)
     {
-        var auctions = await _context.Auctions
-            .Include(x => x.Item)
-            .OrderBy(x => x.Item.Make)
-            .ToListAsync();
-            return _mapper.Map<List<AuctionDto>>(auctions);
+            //Adjustment from Lesson 31 for adding synchronos Messaging
+            var query =_context.Auctions.OrderBy(x => x.Item.Make).AsQueryable(); // .AsQueryable is neccesary, so that we can perform other queries too ( we dont want it to stick it to the type OrderBy)
+
+            if(!string.IsNullOrEmpty(date))
+            {// Only returning auction, which are after a particular date
+                query = query.Where(x => x.UpdatedAt.CompareTo(DateTime.Parse(date).ToUniversalTime())>0);// CompareTo: x < 0: earlier , x > o: later
+            }
+                // New approach of returning auctions in Lesson 31
+
+                return await query.ProjectTo<AuctionDto>(_mapper.ConfigurationProvider).ToListAsync();
+                 // Removed after lesson 31, due to a better solution above
+                /*
+                var auctions = await _context.Auctions
+                    .Include(x => x.Item)
+                    .OrderBy(x => x.Item.Make)
+                    .ToListAsync();
+                    return _mapper.Map<List<AuctionDto>>(auctions);
+                */
 
     }
     [HttpGet("{id}")]
     public async Task<ActionResult<AuctionDto>> GetAuctionById(Guid id)
     {
+        
+       
         var auction = await _context.Auctions 
             .Include(x => x.Item)
             .FirstOrDefaultAsync(x => x.Id ==id);
         if (auction ==null) return NotFound();
         return _mapper.Map<AuctionDto>(auction);
+       
     }
         /*And we don't need to specify any parameters for this because our framework is smart enough to realize that if a post request comes in to list routes, then this is an Http get request.*/
     [HttpPost]
